@@ -61,54 +61,63 @@ export default function Dashboard() {
     }
   }, []);
 
-  const forecastData = useMemo(() => {
-    const diasParaExibir = [];
-    const hoje = new Date();
-    const logsExistentes = new Map<string, WeatherLogDto>();
+ const forecastData = useMemo(() => {
+  const dias: WeatherLogDto[] = [];
+  const hoje = new Date();
 
-    logs.forEach(log => {
-      if (log.createdAt) {
-        const dataFormatada = new Date(log.createdAt).toLocaleDateString('pt-BR');
-        logsExistentes.set(dataFormatada, log);
-      }
-    });
+  const logsMap = new Map<string, WeatherLogDto>();
 
-    for (let i = 0; i < 7; i++) {
-      const dataFutura = new Date();
-      dataFutura.setDate(hoje.getDate() + i);
-      const dataChave = dataFutura.toLocaleDateString('pt-BR');
+  logs.forEach(log => {
+    if (log.createdAt) {
+      const key = new Date(log.createdAt).toDateString();
+      logsMap.set(key, log);
+    }
+  });
 
-      if (logsExistentes.has(dataChave)) {
-        diasParaExibir.push(logsExistentes.get(dataChave)!);
-      } else if (
-        futureForecast &&
-        futureForecast.dates[i] &&
-        !logsExistentes.has(
-          new Date(futureForecast.dates[i]).toLocaleDateString("pt-BR")
-        )
-      ) {
-        diasParaExibir.push({
+  for (let offset = 0; offset < 7; offset++) {
+    const date = new Date(hoje);
+    date.setDate(hoje.getDate() + offset);
+    const key = date.toDateString();
+
+    // 1️⃣ Prioridade total para log salvo
+    if (logsMap.has(key)) {
+      dias.push(logsMap.get(key)!);
+      continue;
+    }
+
+    // 2️⃣ Forecast alinhado por DATA, não por índice
+    if (futureForecast) {
+      const forecastIndex = futureForecast.dates.findIndex(d =>
+        new Date(d).toDateString() === key
+      );
+
+      if (forecastIndex !== -1) {
+        dias.push({
           city: cityWeather?.city || data?.lastWeather?.city || "Cidade",
-          temperature: Math.round(futureForecast.maxTemps[i]),
-          humidity: futureForecast.humidities[i],
-          condition: getConditionText(futureForecast.conditionCodes[i]),
-          conditionCode: futureForecast.conditionCodes[i],
-          createdAt: new Date(futureForecast.dates[i]).toISOString(),
+          temperature: Math.round(futureForecast.maxTemps[forecastIndex]),
+          humidity: futureForecast.humidities[forecastIndex],
+          condition: getConditionText(futureForecast.conditionCodes[forecastIndex]),
+          conditionCode: futureForecast.conditionCodes[forecastIndex],
+          createdAt: futureForecast.dates[forecastIndex],
           updatedAt: new Date().toISOString(),
         } as WeatherLogDto);
-      } else {
-        diasParaExibir.push({
-          city: cityWeather?.city || data?.lastWeather?.city || "...",
-          temperature: 0,
-          humidity: 0,
-          condition: "Buscando...",
-          conditionCode: 0,
-          createdAt: dataFutura.toISOString(),
-        } as WeatherLogDto);
+        continue;
       }
     }
-    return diasParaExibir;
-  }, [logs, cityWeather, data, futureForecast]);
+
+    // 3️⃣ Fallback elegante
+    dias.push({
+      city: cityWeather?.city || data?.lastWeather?.city || "...",
+      temperature: 0,
+      humidity: 0,
+      condition: "Buscando...",
+      conditionCode: 0,
+      createdAt: date.toISOString(),
+    } as WeatherLogDto);
+  }
+
+  return dias;
+}, [logs, futureForecast, cityWeather, data]);
 
   const fetchLogs = useCallback(async (nomeCidade: string) => {
     if (!usuario?.token || !nomeCidade) return;
