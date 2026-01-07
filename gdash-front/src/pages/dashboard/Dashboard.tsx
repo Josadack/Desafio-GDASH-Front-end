@@ -12,6 +12,7 @@ import { SearchOverlay } from "../../components/dashboard/loader/SearchOverlay";
 import { fetchWeeklyForecast, getCityCoords, type WeeklyForecast } from "../../services/weeklyForecast";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { WeatherRequestsCard } from "../../components/dashboard/WeatherRequestsCard";
+
 import { UsersTotalCard } from "../../components/dashboard/UsersTotalCard";
 import { getLastCities } from "../../services/LastCities.service";
 
@@ -37,17 +38,17 @@ export default function Dashboard() {
     return "Nublado";
   };
 
-  const formatarDiaSemana = (dataString: string) => {
-    if (!dataString) return "";
+const formatarDiaSemana = (dataString: string) => {
+  if (!dataString) return "";
 
-    const [ano, mes, dia] = dataString.split("T")[0].split("-").map(Number);
+  const [ano, mes, dia] = dataString.split("T")[0].split("-").map(Number);
 
-    const dataUTC = new Date(Date.UTC(ano, mes - 1, dia));
+  const dataUTC = new Date(Date.UTC(ano, mes - 1, dia));
 
-    return dataUTC
-      .toLocaleDateString("pt-BR", { weekday: "long", timeZone: "UTC" })
-      .replace("-feira", "");
-  };
+  return dataUTC
+    .toLocaleDateString("pt-BR", { weekday: "long", timeZone: "UTC" })
+    .replace("-feira", "");
+};
 
   const loadFutureDays = useCallback(async (cityName: string) => {
     try {
@@ -61,63 +62,48 @@ export default function Dashboard() {
     }
   }, []);
 
- const forecastData = useMemo(() => {
-  const dias: WeatherLogDto[] = [];
-  const hoje = new Date();
+  const forecastData = useMemo(() => {
+    const diasParaExibir = [];
+    const hoje = new Date();
+    const logsExistentes = new Map<string, WeatherLogDto>();
 
-  const logsMap = new Map<string, WeatherLogDto>();
+    logs.forEach(log => {
+      if (log.createdAt) {
+        const dataFormatada = new Date(log.createdAt).toLocaleDateString('pt-BR');
+        logsExistentes.set(dataFormatada, log);
+      }
+    });
 
-  logs.forEach(log => {
-    if (log.createdAt) {
-      const key = new Date(log.createdAt).toDateString();
-      logsMap.set(key, log);
-    }
-  });
+    for (let i = 0; i < 7; i++) {
+      const dataFutura = new Date();
+      dataFutura.setDate(hoje.getDate() + i);
+      const dataChave = dataFutura.toLocaleDateString('pt-BR');
 
-  for (let offset = 0; offset < 7; offset++) {
-    const date = new Date(hoje);
-    date.setDate(hoje.getDate() + offset);
-    const key = date.toDateString();
-
-    // 1️⃣ Prioridade total para log salvo
-    if (logsMap.has(key)) {
-      dias.push(logsMap.get(key)!);
-      continue;
-    }
-
-    // 2️⃣ Forecast alinhado por DATA, não por índice
-    if (futureForecast) {
-      const forecastIndex = futureForecast.dates.findIndex(d =>
-        new Date(d).toDateString() === key
-      );
-
-      if (forecastIndex !== -1) {
-        dias.push({
+      if (logsExistentes.has(dataChave)) {
+        diasParaExibir.push(logsExistentes.get(dataChave)!);
+      } else if (futureForecast && futureForecast.dates[i]) {
+        diasParaExibir.push({
           city: cityWeather?.city || data?.lastWeather?.city || "Cidade",
-          temperature: Math.round(futureForecast.maxTemps[forecastIndex]),
-          humidity: futureForecast.humidities[forecastIndex],
-          condition: getConditionText(futureForecast.conditionCodes[forecastIndex]),
-          conditionCode: futureForecast.conditionCodes[forecastIndex],
-          createdAt: futureForecast.dates[forecastIndex],
+          temperature: Math.round(futureForecast.maxTemps[i]),
+          humidity: futureForecast.humidities[i],
+          condition: getConditionText(futureForecast.conditionCodes[i]),
+          conditionCode: futureForecast.conditionCodes[i],
+          createdAt: new Date(futureForecast.dates[i]).toISOString(),
           updatedAt: new Date().toISOString(),
         } as WeatherLogDto);
-        continue;
+      } else {
+        diasParaExibir.push({
+          city: cityWeather?.city || data?.lastWeather?.city || "...",
+          temperature: 0,
+          humidity: 0,
+          condition: "Buscando...",
+          conditionCode: 0,
+          createdAt: dataFutura.toISOString(),
+        } as WeatherLogDto);
       }
     }
-
-    // 3️⃣ Fallback elegante
-    dias.push({
-      city: cityWeather?.city || data?.lastWeather?.city || "...",
-      temperature: 0,
-      humidity: 0,
-      condition: "Buscando...",
-      conditionCode: 0,
-      createdAt: date.toISOString(),
-    } as WeatherLogDto);
-  }
-
-  return dias;
-}, [logs, futureForecast, cityWeather, data]);
+    return diasParaExibir;
+  }, [logs, cityWeather, data, futureForecast]);
 
   const fetchLogs = useCallback(async (nomeCidade: string) => {
     if (!usuario?.token || !nomeCidade) return;
@@ -130,13 +116,13 @@ export default function Dashboard() {
   }, [usuario?.token]);
 
   useEffect(() => {
-    if (!usuario?.token) return;
+  if (!usuario?.token) return;
 
-    buscarWeatherLogs((allLogs: WeatherLogDto[]) => {
-      setLastCities(getLastCities(allLogs, 5));
-    }, usuario.token);
-  }, [usuario?.token]);
-
+  buscarWeatherLogs((allLogs: WeatherLogDto[]) => {
+    setLastCities(getLastCities(allLogs, 5));
+  }, usuario.token);
+}, [usuario?.token]);
+  
 
   const fetchDashboard = useCallback(async (): Promise<Dashboard | null> => {
     if (!usuario?.token) return null;
@@ -191,11 +177,11 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) return <DotLottieReact
-    src="https://lottie.host/ab97b5da-8f85-4c10-be06-b36e13bc46a0/CzD6b28HrK.lottie"
-    loop
-    autoplay
-  />
+  if (loading) return    <DotLottieReact
+      src="https://lottie.host/ab97b5da-8f85-4c10-be06-b36e13bc46a0/CzD6b28HrK.lottie"
+      loop
+      autoplay
+    />
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0f172a] text-[#F1F5F9] p-4 sm:p-10">
@@ -222,7 +208,7 @@ export default function Dashboard() {
         <WeatherRequestsCard
           total={data?.totalWeatherRequests ?? 0}
           lastCities={lastCities}
-        />
+          />
         <LastWeatherCard data={cityWeather ? { ...cityWeather, updatedAt: cityWeather.updatedAt || new Date().toISOString() } : data?.lastWeather} />
       </div>
 
