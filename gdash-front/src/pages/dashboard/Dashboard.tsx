@@ -38,17 +38,17 @@ export default function Dashboard() {
     return "Nublado";
   };
 
-const formatarDiaSemana = (dataString: string) => {
-  if (!dataString) return "";
+  const formatarDiaSemana = (dataString: string) => {
+    if (!dataString) return "";
 
-  const [ano, mes, dia] = dataString.split("T")[0].split("-").map(Number);
+    const [ano, mes, dia] = dataString.split("T")[0].split("-").map(Number);
 
-  const dataUTC = new Date(Date.UTC(ano, mes - 1, dia));
+    const dataUTC = new Date(Date.UTC(ano, mes - 1, dia));
 
-  return dataUTC
-    .toLocaleDateString("pt-BR", { weekday: "long", timeZone: "UTC" })
-    .replace("-feira", "");
-};
+    return dataUTC
+      .toLocaleDateString("pt-BR", { weekday: "long", timeZone: "UTC" })
+      .replace("-feira", "");
+  };
 
   const loadFutureDays = useCallback(async (cityName: string) => {
     try {
@@ -74,14 +74,20 @@ const formatarDiaSemana = (dataString: string) => {
       }
     });
 
-    for (let i = 1; i < 7; i++) {
+    for (let i = 0; i < 7; i++) {
       const dataFutura = new Date();
       dataFutura.setDate(hoje.getDate() + i);
       const dataChave = dataFutura.toLocaleDateString('pt-BR');
 
       if (logsExistentes.has(dataChave)) {
         diasParaExibir.push(logsExistentes.get(dataChave)!);
-      } else if (futureForecast && futureForecast.dates[i]) {
+      } else if (
+        futureForecast &&
+        futureForecast.dates[i] &&
+        !logsExistentes.has(
+          new Date(futureForecast.dates[i]).toLocaleDateString("pt-BR")
+        )
+      ) {
         diasParaExibir.push({
           city: cityWeather?.city || data?.lastWeather?.city || "Cidade",
           temperature: Math.round(futureForecast.maxTemps[i]),
@@ -116,13 +122,13 @@ const formatarDiaSemana = (dataString: string) => {
   }, [usuario?.token]);
 
   useEffect(() => {
-  if (!usuario?.token) return;
+    if (!usuario?.token) return;
 
-  buscarWeatherLogs((allLogs: WeatherLogDto[]) => {
-    setLastCities(getLastCities(allLogs, 5));
-  }, usuario.token);
-}, [usuario?.token]);
-  
+    buscarWeatherLogs((allLogs: WeatherLogDto[]) => {
+      setLastCities(getLastCities(allLogs, 5));
+    }, usuario.token);
+  }, [usuario?.token]);
+
 
   const fetchDashboard = useCallback(async (): Promise<Dashboard | null> => {
     if (!usuario?.token) return null;
@@ -177,11 +183,11 @@ const formatarDiaSemana = (dataString: string) => {
     }
   };
 
-  if (loading) return    <DotLottieReact
-      src="https://lottie.host/ab97b5da-8f85-4c10-be06-b36e13bc46a0/CzD6b28HrK.lottie"
-      loop
-      autoplay
-    />
+  if (loading) return <DotLottieReact
+    src="https://lottie.host/ab97b5da-8f85-4c10-be06-b36e13bc46a0/CzD6b28HrK.lottie"
+    loop
+    autoplay
+  />
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0f172a] text-[#F1F5F9] p-4 sm:p-10">
@@ -208,7 +214,7 @@ const formatarDiaSemana = (dataString: string) => {
         <WeatherRequestsCard
           total={data?.totalWeatherRequests ?? 0}
           lastCities={lastCities}
-          />
+        />
         <LastWeatherCard data={cityWeather ? { ...cityWeather, updatedAt: cityWeather.updatedAt || new Date().toISOString() } : data?.lastWeather} />
       </div>
 
