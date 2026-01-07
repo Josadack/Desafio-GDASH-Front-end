@@ -74,7 +74,7 @@ const formatarDiaSemana = (dataString: string) => {
       }
     });
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 1; i < 7; i++) {
       const dataFutura = new Date();
       dataFutura.setDate(hoje.getDate() + i);
       const dataChave = dataFutura.toLocaleDateString('pt-BR');
