@@ -38,6 +38,16 @@ export default function Dashboard() {
     return "Nublado";
   };
 
+  const diaDaSemanaPorIndex = (index: number) => {
+  const base = new Date();
+  base.setHours(12, 0, 0, 0); // evita bugs de fuso
+  base.setDate(base.getDate() + index);
+
+  return base
+    .toLocaleDateString("pt-BR", { weekday: "long" })
+    .replace("-feira", "");
+};
+
 const formatarDiaSemana = (dataString: string) => {
   if (!dataString) return "";
 
@@ -226,7 +236,7 @@ const formatarDiaSemana = (dataString: string) => {
                 className="shrink-0 snap-center" // shrink-0 impede o card de diminuir. snap-center ajuda na rolagem mobile.
               >
                 <ForecastCard
-                  label={formatarDiaSemana(log.createdAt!)}
+                  label={diaDaSemanaPorIndex(index)}
                   temp={log.temperature}
                   weatherCode={log.conditionCode || 0}
                   humidity={log.humidity}
