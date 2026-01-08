@@ -48,17 +48,17 @@ export default function Dashboard() {
     .replace("-feira", "");
 };
 
-const formatarDiaSemana = (dataString: string) => {
-  if (!dataString) return "";
+// const formatarDiaSemana = (dataString: string) => {
+//   if (!dataString) return "";
 
-  const [ano, mes, dia] = dataString.split("T")[0].split("-").map(Number);
+//   const [ano, mes, dia] = dataString.split("T")[0].split("-").map(Number);
 
-  const dataUTC = new Date(Date.UTC(ano, mes - 1, dia));
+//   const dataUTC = new Date(Date.UTC(ano, mes - 1, dia));
 
-  return dataUTC
-    .toLocaleDateString("pt-BR", { weekday: "long", timeZone: "UTC" })
-    .replace("-feira", "");
-};
+//   return dataUTC
+//     .toLocaleDateString("pt-BR", { weekday: "long", timeZone: "UTC" })
+//     .replace("-feira", "");
+// };
 
   const loadFutureDays = useCallback(async (cityName: string) => {
     try {
